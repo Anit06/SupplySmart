@@ -82,10 +82,10 @@ function Notifications() {
     localStorage.setItem("read_notifications", JSON.stringify(readIds));
   }, [readIds]);
 
-  // Reset to page 1 whenever filter changes
-  useEffect(() => {
+  const changeFilter = (nextFilter) => {
+    setFilter(nextFilter);
     setCurrentPage(1);
-  }, [filter]);
+  };
 
   // Expand status history of all orders into individual notification items
   const notificationsList = useMemo(() => {
@@ -211,21 +211,21 @@ function Notifications() {
         <div className="filter-tabs">
           <button
             className={`tab ${filter === "all" ? "active" : ""}`}
-            onClick={() => setFilter("all")}
+            onClick={() => changeFilter("all")}
             type="button"
           >
             All ({notificationsList.length})
           </button>
           <button
             className={`tab ${filter === "unread" ? "active" : ""}`}
-            onClick={() => setFilter("unread")}
+            onClick={() => changeFilter("unread")}
             type="button"
           >
             Unread ({notificationsList.filter((n) => !readIds.includes(n.id)).length})
           </button>
           <button
             className={`tab ${filter === "delivered" ? "active" : ""}`}
-            onClick={() => setFilter("delivered")}
+            onClick={() => changeFilter("delivered")}
             type="button"
           >
             Delivered

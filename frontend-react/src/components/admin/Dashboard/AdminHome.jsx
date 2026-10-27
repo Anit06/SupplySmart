@@ -156,7 +156,10 @@ function AdminHome() {
     orders
       .filter((order) => order.status !== "Cancelled")
       .forEach((order) => {
-        const date = new Date(order.createdAt || order.updatedAt || Date.now());
+        const dateValue = order.createdAt || order.updatedAt;
+        if (!dateValue) return;
+        const date = new Date(dateValue);
+        if (Number.isNaN(date.getTime())) return;
         const month = months.find(
           (item) => item.month === date.getMonth() && item.year === date.getFullYear()
         );
@@ -170,15 +173,6 @@ function AdminHome() {
           new Date(left.createdAt || left.updatedAt || 0)
       )
       .slice(0, 5);
-
-    const warehouseOrderCounts = orders.reduce((counts, order) => {
-      if (order.warehouseId) {
-        counts[order.warehouseId] = (counts[order.warehouseId] || 0) + 1;
-      }
-      return counts;
-    }, {});
-
-    const maxWarehouseOrders = Math.max(1, ...Object.values(warehouseOrderCounts));
 
     const warehouseSummary = warehouses.map((warehouse) => {
       const warehouseId = String(warehouse._id || warehouse.id || "");

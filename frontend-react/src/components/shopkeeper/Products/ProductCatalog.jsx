@@ -17,26 +17,25 @@ function ProductCatalog() {
     const [sortOrder, setSortOrder] = useState("");
 
     useEffect(() => {
-        loadWarehouses();
+        let active = true;
+        getWarehouses()
+            .then((res) => {
+                if (!active) return;
+                const activeWarehouses = (res.warehouses || []).filter(
+                    (warehouse) =>
+                        warehouse.status &&
+                        warehouse.status.toLowerCase() === "active"
+                );
+                setWarehouses(activeWarehouses);
+            })
+            .catch((error) => console.log(error));
+
+        return () => {
+            active = false;
+        };
     }, []);
 
-    const loadWarehouses = async () => {
-        try {
-            const res = await getWarehouses();
-
-            const activeWarehouses = (res.warehouses || []).filter(
-                (warehouse) =>
-                    warehouse.status &&
-                    warehouse.status.toLowerCase() === "active"
-            );
-
-            setWarehouses(activeWarehouses);
-        } catch (error) {
-            console.log(error);
-        }
-    };
-
-    const loadProducts = async (warehouseId) => {
+    async function loadProducts(warehouseId) {
         try {
             const res = await getWarehouseCatalog(warehouseId);
             setProducts(res.data.products || []);
@@ -44,7 +43,7 @@ function ProductCatalog() {
         } catch (error) {
             console.log(error);
         }
-    };
+    }
 
     const increaseQuantity = (product) => {
         const qty = selectedQuantities[product.productId] || 1;

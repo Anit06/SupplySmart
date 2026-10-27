@@ -35,22 +35,21 @@ function ReportSales() {
   const [excelLoading, setExcelLoading] = useState(false);
 
   useEffect(() => {
-    loadWarehouses();
+    let active = true;
+    getWarehouses()
+      .then((data) => {
+        if (!active) return;
+        setWarehouses(data.warehouses || []);
+        if (data.warehouses?.length > 0) {
+          setWarehouseId(data.warehouses[0]._id);
+        }
+      })
+      .catch((error) => console.log(error));
+
+    return () => {
+      active = false;
+    };
   }, []);
-
-  const loadWarehouses = async () => {
-    try {
-      const data = await getWarehouses();
-
-      setWarehouses(data.warehouses);
-
-      if (data.warehouses.length > 0) {
-        setWarehouseId(data.warehouses[0]._id);
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  };
 
   const handleViewReport = async () => {
     if (!warehouseId) return;

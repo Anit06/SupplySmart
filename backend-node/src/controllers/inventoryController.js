@@ -1,5 +1,13 @@
 const javaService = require("../services/javaService");
 
+const sendInventoryServiceError = (res, error) => res
+  .status(error.statusCode || 503)
+  .json({
+    success: false,
+    code: error.code || "INVENTORY_SERVICE_ERROR",
+    message: error.message || "Inventory service request failed"
+  });
+
 /*
 ==================================
 GET INVENTORY
@@ -13,14 +21,7 @@ exports.getInventory = async (req, res) => {
 
     return res.status(200).json(response.data);
   } catch (err) {
-    const status = err.response?.status || 500;
-    const message =
-      err.response?.data?.message || err.response?.data || err.message;
-
-    return res.status(status).json({
-      success: false,
-      message
-    });
+    return sendInventoryServiceError(res, err);
   }
 };
 
@@ -30,32 +31,11 @@ ADD INVENTORY
 ==================================
 */
 exports.addInventory = async (req, res) => {
-
-  console.log("Incoming Request:");
-  console.log(req.body);
-
   try {
-
     const response = await javaService.addInventory(req.body);
-
-    console.log("Java Response:");
-    console.log(response.data);
-
-    res.json(response.data);
-
+    return res.json(response.data);
   } catch (err) {
-
-    console.log("Java Error:");
-
-    console.log(err.response?.status);
-
-    console.log(err.response?.data);
-
-    console.log(err.message);
-
-    res.status(500).json({
-      message: err.response?.data || err.message
-    });
+    return sendInventoryServiceError(res, err);
   }
 };
 
@@ -73,14 +53,7 @@ exports.updateInventory = async (req, res) => {
 
     return res.status(200).json(response.data);
   } catch (err) {
-    const status = err.response?.status || 500;
-    const message =
-      err.response?.data?.message || err.response?.data || err.message;
-
-    return res.status(status).json({
-      success: false,
-      message
-    });
+    return sendInventoryServiceError(res, err);
   }
 };
 
@@ -95,13 +68,6 @@ exports.deleteInventory = async (req, res) => {
 
     return res.status(200).json(response.data);
   } catch (err) {
-    const status = err.response?.status || 500;
-    const message =
-      err.response?.data?.message || err.response?.data || err.message;
-
-    return res.status(status).json({
-      success: false,
-      message
-    });
+    return sendInventoryServiceError(res, err);
   }
 };

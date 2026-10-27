@@ -1,9 +1,16 @@
 package com.supplychain.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
+import java.util.ArrayList;
+import java.util.List;
 
 @Document(collection = "inventory")
+@CompoundIndex(
+        name = "warehouse_product_unique",
+        def = "{'warehouse': 1, 'product': 1}",
+        unique = true)
 public class Inventory {
 
     @Id
@@ -14,6 +21,8 @@ public class Inventory {
     private String product;
 
     private int stock;
+
+    private List<InventoryReservation> reservations = new ArrayList<>();
 
     public Inventory() {
     }
@@ -48,5 +57,13 @@ public class Inventory {
 
     public void setStock(int stock) {
         this.stock = stock;
+    }
+
+    public List<InventoryReservation> getReservations() {
+        return reservations;
+    }
+
+    public void setReservations(List<InventoryReservation> reservations) {
+        this.reservations = reservations;
     }
 }

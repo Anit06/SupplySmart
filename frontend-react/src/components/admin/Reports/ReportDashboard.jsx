@@ -3,16 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FaBoxes,
   FaWarehouse,
-  FaFilePdf,
-  FaFileExcel,
   FaChevronDown,
   FaChevronRight,
 } from "react-icons/fa";
 
 import {
   MdInventory,
-  MdWarning,
-  MdCancel,
   MdOutlineSpaceDashboard,
 } from "react-icons/md";
 
@@ -47,35 +43,32 @@ function ReportDashboard() {
   const [excelLoading, setExcelLoading] = useState(false);
 
   useEffect(() => {
-    loadReports();
+    let active = true;
+    Promise.all([
+      getSummaryReport(),
+      getInventoryReport(),
+      getLowStockReport(),
+    ])
+      .then(([summaryRes, inventoryRes, lowStockRes]) => {
+        if (!active) return;
+        setSummary(summaryRes.data.summary);
+        const inventoryData = inventoryRes.data.inventory || [];
+        setInventory(inventoryData);
+        if (inventoryData.length > 0) {
+          setOpenWarehouse(inventoryData[0].warehouseName);
+        }
+        setLowStockProducts(lowStockRes.data.products || []);
+      })
+      .catch((error) => console.log(error))
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const loadReports = async () => {
-    try {
-      const [summaryRes, inventoryRes, lowStockRes, outOfStockRes] =
-        await Promise.all([
-          getSummaryReport(),
-          getInventoryReport(),
-          getLowStockReport(),
-        ]);
-
-      setSummary(summaryRes.data.summary);
-
-      const inventoryData = inventoryRes.data.inventory || [];
-
-      setInventory(inventoryData);
-
-      if (inventoryData.length > 0) {
-        setOpenWarehouse(inventoryData[0].warehouseName);
-      }
-
-      setLowStockProducts(lowStockRes.data.products || []);
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  };
   //DOWNLOAD PDF
 
   const handlePDF = async () => {

@@ -1,0 +1,159 @@
+services:
+  mongo:
+    image: mongo:8.0.12
+    command: ["mongod", "--bind_ip_all"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in the local .env file}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in the local .env file}
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 }).ok"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  mongo-indexes:
+    build:
+      context: ./backend-node
+    command: ["node", "scripts/createMongoIndexes.js"]
+    environment:
+      NODE_ENV: production
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/supply_chain?authSource=admin
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: "no"
+
+  java-inventory:
+    build:
+      context: ./java-inventory-service
+    environment:
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/supply_chain?authSource=admin
+      INVENTORY_SERVICE_TOKEN: ${JAVA_SERVICE_TOKEN:?Set JAVA_SERVICE_TOKEN in the local .env file}
+    depends_on:
+      mongo-indexes:
+        condition: service_completed_successfully
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS -H "X-Internal-Service-Token: $${INVENTORY_SERVICE_TOKEN}" http://127.0.0.1:8080/health/ready || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    restart: unless-stopped
+
+  python-ai:
+    build:
+      context: ./python-ai-service
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/health/ready', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  backend-node:
+    build:
+      context: ./backend-node
+    environment:
+      NODE_ENV: development
+      PORT: "5000"
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/supply_chain?authSource=admin
+      MONGO_MAX_POOL_SIZE: ${MONGO_MAX_POOL_SIZE:-20}
+      JAVA_SERVICE_URL: http://java-inventory:8080
+      JAVA_SERVICE_TOKEN: ${JAVA_SERVICE_TOKEN:?Set JAVA_SERVICE_TOKEN in the local .env file}
+      JAVA_SERVICE_TIMEOUT_MS: ${JAVA_SERVICE_TIMEOUT_MS:-10000}
+      JAVA_SERVICE_ALLOW_PRIVATE_HTTP: "true"
+      PYTHON_SERVICE_URL: http://python-ai:5001
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the local .env file}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      RAZORPAY_API_TIMEOUT_MS: ${RAZORPAY_API_TIMEOUT_MS:-10000}
+      CHECKOUT_RECOVERY_INTERVAL_MS: ${CHECKOUT_RECOVERY_INTERVAL_MS:-60000}
+      PYTHON_SERVICE_TIMEOUT_MS: ${PYTHON_SERVICE_TIMEOUT_MS:-10000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+    depends_on:
+      mongo-indexes:
+        condition: service_completed_successfully
+      java-inventory:
+        condition: service_healthy
+      python-ai:
+        condition: service_healthy
+    volumes:
+      - uploads-data:/app/uploads
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend-react
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      backend-node:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_HTTP_PORT:-8088}:8080"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  k6:
+    image: grafana/k6:0.54.0
+    profiles: ["loadtest"]
+    entrypoint: ["k6", "run", "/load/k6.js"]
+    environment:
+      API_URL: http://web:8080/api
+      BACKEND_HEALTH_URL: http://web:8080
+      INTERNAL_METRICS_URL: http://backend-node:5000
+      LT_USER_PREFIX: ${LT_USER_PREFIX:-}
+      LT_USER_DOMAIN: ${LT_USER_DOMAIN:-example.invalid}
+      LT_USER_PASSWORD: ${LT_USER_PASSWORD:-}
+      LT_WAREHOUSE_ID: ${LT_WAREHOUSE_ID:-}
+      LT_PRODUCT_ID: ${LT_PRODUCT_ID:-}
+      LT_QUANTITY: ${LT_QUANTITY:-1}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+    volumes:
+      - ./tests/load:/load:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  uploads-data:

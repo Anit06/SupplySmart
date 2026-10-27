@@ -1,4 +1,6 @@
 const Order = require("../models/Order");
+const Payment = require("../models/Payment");
+const CheckoutAttempt = require("../models/CheckoutAttempt");
 const Supplier = require("../models/Supplier");
 const javaService = require("./javaService");
 const {
@@ -265,6 +267,19 @@ const updateOrderStatus = async (
 
     }
 
+    if (status === "Cancelled") {
+        const successfulPayment = await Payment.findOne({
+            orderId: order._id,
+            paymentStatus: "Success"
+        }).lean();
+        if (order.paymentStatus === "Paid" || successfulPayment) {
+            throw new Error("A paid order cannot be cancelled until a refund is completed.");
+        }
+        if (order.paymentMethod !== "Cash On Delivery" && order.paymentStatus !== "Failed") {
+            throw new Error("Confirm payment failure before cancelling this order.");
+        }
+    }
+
     const orderWeight = calculateOrderWeight(order.items || []);
 
     if (status === "Shipped") {
@@ -346,22 +361,50 @@ const updateOrderStatus = async (
         !order.returnedStock
 
     ) {
+        if (order.checkoutId) {
+            await CheckoutAttempt.updateOne(
+                { userId: order.userId, checkoutId: order.checkoutId },
+                {
+                    $set: {
+                        status: "RECOVERY_REQUIRED",
+                        orderId: order._id,
+                        ...(order.paymentStatus === "Failed" ? { paymentState: "FAILED" } : {}),
+                        leaseExpiresAt: new Date()
+                    }
+                }
+            );
+        }
+        order.status = status;
+        await order.save();
 
         for (const item of order.items) {
 
-            await javaService.addInventoryStock({
-
-                warehouseId: order.warehouseId.toString(),
-
-                productId: item.productId.toString(),
-
-                stock: item.quantity
-
-            });
+            if (order.checkoutId) {
+                await javaService.releaseInventoryReservation({
+                    checkoutId: order.checkoutId,
+                    warehouseId: order.warehouseId.toString(),
+                    productId: item.productId.toString(),
+                    quantity: item.quantity
+                });
+            } else {
+                await javaService.addInventoryStock({
+                    warehouseId: order.warehouseId.toString(),
+                    productId: item.productId.toString(),
+                    stock: item.quantity
+                });
+            }
 
         }
 
         order.returnedStock = true;
+        await order.save();
+        if (order.checkoutId) {
+            await CheckoutAttempt.updateOne(
+                { userId: order.userId, checkoutId: order.checkoutId },
+                { $set: { status: "CANCELLED", recoveryLeaseUntil: null } }
+            );
+        }
+        return order;
 
     }
 

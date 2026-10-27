@@ -92,6 +92,14 @@ const register = async (req, res) => {
 // LOGIN
 
 const login = async (req, res) => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    return res.status(503).json({
+      success: false,
+      message: "Authentication is not configured"
+    });
+  }
+
   try {
 
     const {
@@ -127,8 +135,7 @@ const login = async (req, res) => {
         id: user._id,
         role: user.role
       },
-      process.env.JWT_SECRET ||
-      "cdac-secret-key",
+      jwtSecret,
       {
         expiresIn: "1d"
       }

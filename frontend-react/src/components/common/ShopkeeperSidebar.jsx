@@ -7,13 +7,11 @@ import {
   FaShoppingCart,
   FaHistory,
   FaBoxOpen,
-  FaSearch,
   FaUser,
   FaMapMarkerAlt,
   FaBell,
   FaHeadset,
   FaSignOutAlt,
-  FaStore,
   FaShoppingBag,
 } from "react-icons/fa";
 
@@ -30,20 +28,18 @@ function ShopkeeperSidebar() {
 
   return (
     <div className="shopkeeper-sidebar">
-      {/* Logo */}
-
       <div className="shopkeeper-logo">
-        <div className="shopkeeper-logo-icon">
-          <FaStore />
-        </div>
+        <img
+          src="/images/supplysmart-logo.png"
+          alt="SupplySmart logo"
+          className="brand-logo brand-logo--sidebar brand-logo--shopkeeper"
+        />
 
         <div>
-          <h2>AI Supply Chain</h2>
-          <p>Management System</p>
+          <h2>SupplySmart</h2>
+          <p>Smart Logistics</p>
         </div>
       </div>
-
-      {/* Menu */}
 
       <div className="shopkeeper-menu">
         <NavLink to="/shopkeeper" end className="shopkeeper-link">

@@ -1,4 +1,5 @@
 import { FaEdit, FaTrash } from "react-icons/fa";
+import { getBackendAssetUrl } from "../../../services/api";
 
 function ProductList({ products, onEdit, onDelete }) {
   if (!products.length) {
@@ -51,7 +52,7 @@ function ProductList({ products, onEdit, onDelete }) {
                   <img
                     src={
                       product.image
-                        ? `http://localhost:5000/${product.image}`
+                        ? getBackendAssetUrl(product.image)
                         : "https://via.placeholder.com/60"
                     }
                     alt={product.name}

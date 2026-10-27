@@ -11,7 +11,6 @@ import AddressModal from "./AddressModal";
 import "../../../assets/css/address.css";
 
 function Address() {
-  const [profile, setProfile] = useState(null);
   const [addresses, setAddresses] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
@@ -19,23 +18,26 @@ function Address() {
   const [userId, setUserId] = useState("");
   const [feedback, setFeedback] = useState({ type: "", message: "" });
 
-  const fetchProfile = async () => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}") || {};
-      if (!user.id) return;
-
-      setUserId(user.id);
-      const response = await getProfile(user.id);
-      const shopProfile = response.data.profile;
-      setProfile(shopProfile);
-      setAddresses(shopProfile.addresses || []);
-    } catch (error) {
-      setFeedback({ type: "error", message: "Failed to fetch your addresses" });
-    }
-  };
-
   useEffect(() => {
-    fetchProfile();
+    let active = true;
+    const user = JSON.parse(localStorage.getItem("user") || "{}") || {};
+    if (!user.id) return undefined;
+
+    getProfile(user.id)
+      .then((response) => {
+        if (!active) return;
+        setUserId(user.id);
+        setAddresses(response.data.profile.addresses || []);
+      })
+      .catch(() => {
+        if (active) {
+          setFeedback({ type: "error", message: "Failed to fetch your addresses" });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleOpenAdd = () => {

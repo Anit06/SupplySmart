@@ -36,7 +36,16 @@ function Users() {
   };
 
   useEffect(() => {
-    loadUsers();
+    let active = true;
+    getUsers()
+      .then((data) => {
+        if (active && data.success) setUsers(data.users);
+      })
+      .catch((error) => console.log(error));
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Pagination Calculations

@@ -21,18 +21,12 @@ const monthNames = [
 function DemandPrediction() {
 
     const [predictions, setPredictions] = useState([]);
-    const [filtered, setFiltered] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const [search, setSearch] = useState("");
     const [warehouse, setWarehouse] = useState("All");
 
-    useEffect(() => {
-        loadPredictions();
-    }, []);
-
-    useEffect(() => {
-
+    const filtered = useMemo(() => {
         let data = [...predictions];
 
         if (warehouse !== "All") {
@@ -53,33 +47,28 @@ function DemandPrediction() {
 
         }
 
-        setFiltered(data);
-
+        return data;
     }, [search, warehouse, predictions]);
 
-    const loadPredictions = async () => {
+    useEffect(() => {
+        let active = true;
 
-        try {
+        getAllPredictions()
+            .then((response) => {
+                if (active) setPredictions(response.predictions || []);
+            })
+            .catch((error) => {
+                console.log(error);
+                if (active) alert("Unable to load predictions");
+            })
+            .finally(() => {
+                if (active) setLoading(false);
+            });
 
-            const response = await getAllPredictions();
-
-            setPredictions(response.predictions || []);
-
-            setFiltered(response.predictions || []);
-
-        } catch (err) {
-
-            console.log(err);
-
-            alert("Unable to load predictions");
-
-        } finally {
-
-            setLoading(false);
-
-        }
-
-    };
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const warehouses = useMemo(() => {
 

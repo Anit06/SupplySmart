@@ -54,8 +54,7 @@ function Products() {
     loadProducts();
   }, []);
 
-  const loadProducts =
-    async () => {
+  async function loadProducts() {
       const data =
         await getProducts();
 
@@ -64,7 +63,7 @@ function Products() {
           data.products
         );
       }
-    };
+  }
 
   const handleChange =
     (e) => {

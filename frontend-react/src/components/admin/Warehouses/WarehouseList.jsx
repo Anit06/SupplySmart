@@ -17,52 +17,31 @@ function WarehouseList({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [warehouses]);
-
-  const loadData = async () => {
-
-    if (!warehouses || warehouses.length === 0) {
-      setInventories([]);
+    if (!warehouses?.length) {
       return;
     }
 
-    setLoading(true);
+    let active = true;
+    Promise.all([
+      getProducts(),
+      ...warehouses.map((warehouse) => getInventory(warehouse._id)),
+    ])
+      .then(([productRes, ...inventoryResponses]) => {
+        if (!active) return;
+        if (productRes.success) setProducts(productRes.products);
+        setInventories(
+          inventoryResponses.flatMap((response) => response.data || [])
+        );
+      })
+      .catch((error) => console.log(error))
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
-    try {
-
-      // load all products (each product already carries
-      // quantity / unit / stock merged in from ProductHolding
-      // on the backend)
-      const productRes = await getProducts();
-
-      if (productRes.success) {
-        setProducts(productRes.products);
-      }
-
-      // load inventory of every warehouse
-      let allInventory = [];
-
-      for (const warehouse of warehouses) {
-
-        const res = await getInventory(warehouse._id);
-
-        // backend returns the inventory list as the response body directly
-        const list = res.data || [];
-
-        allInventory.push(...list);
-
-      }
-
-      setInventories(allInventory);
-
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      active = false;
+    };
+  }, [warehouses]);
 
   // Total product capacity used inside one warehouse:
   // sum over every inventory row of (inventory stock * product quantity),

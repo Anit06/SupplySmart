@@ -1,4 +1,4 @@
-import { useEffect,useState } from "react";
+import { useCallback, useEffect,useState } from "react";
 
 import { useNavigate,useParams } from "react-router-dom";
 
@@ -11,6 +11,7 @@ import {
 } from "../../../services/orderService";
 
 import { getSuppliers } from "../../../services/supplierService";
+import { getBackendAssetUrl } from "../../../services/api";
 
 import OrderStatus from "./OrderStatus";
 
@@ -56,15 +57,7 @@ function OrderDetails(){
 
     const [feedback,setFeedback]=useState({type:"",message:""});
 
-    useEffect(()=>{
-
-        loadOrder();
-
-        loadSuppliers();
-
-    },[]);
-
-    const loadOrder=async()=>{
+    const loadOrder = useCallback(async () => {
 
         const response=await getAdminOrder(id);
 
@@ -74,25 +67,32 @@ function OrderDetails(){
 
         setLoading(false);
 
-    };
+    }, [id]);
 
-    const loadSuppliers=async()=>{
+    useEffect(() => {
+        let active = true;
+        getAdminOrder(id)
+            .then((response) => {
+                if (!active) return;
+                setOrder(response.order);
+                setSelectedSupplierId(
+                    response.order?.allocatedSupplier?._id
+                    || response.order?.allocatedSupplier
+                    || ""
+                );
+                setLoading(false);
+            })
+            .catch((error) => console.error(error));
+        getSuppliers()
+            .then((response) => {
+                if (active) setSuppliers(response.supplier || []);
+            })
+            .catch((error) => console.error(error));
 
-        try{
-
-            const response=await getSuppliers();
-
-            setSuppliers(response.supplier || []);
-
-        }
-
-        catch(error){
-
-            console.error(error);
-
-        }
-
-    };
+        return () => {
+            active = false;
+        };
+    }, [id]);
 
     const changeStatus=async(status)=>{
 
@@ -320,7 +320,7 @@ function OrderDetails(){
 
                         <img
 
-                            src={`http://localhost:5000/${item.image}`}
+                            src={getBackendAssetUrl(item.image)}
 
                             alt={item.productName}
 

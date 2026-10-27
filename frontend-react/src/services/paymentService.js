@@ -1,104 +1,21 @@
-import axios from "axios";
+import api from "./api";
 
-// Change this if your backend URL is different
-const API = "http://localhost:5000/api/payment";
-
-/*
-==================================
-Create Razorpay Order
-==================================
-*/
-
-export const createOrder = async (amount) => {
-
-    const response = await axios.post(
-
-        `${API}/create-order`,
-
-        {
-            amount
-        }
-
-    );
-
+export const createOrder = async (orderId, attemptId) => {
+    const response = await api.post("/payment/create-order", { orderId, attemptId });
     return response.data;
-
 };
-
-/*
-==================================
-Verify Razorpay Payment
-==================================
-*/
 
 export const verifyPayment = async (paymentData) => {
-
-    const response = await axios.post(
-
-        `${API}/verify`,
-
-        paymentData
-
-    );
-
+    const response = await api.post("/payment/verify", paymentData);
     return response.data;
-
 };
-
-/*
-==================================
-Cash On Delivery
-==================================
-*/
 
 export const cashOnDelivery = async (orderData) => {
-
-    const response = await axios.post(
-
-        `${API}/cod`,
-
-        orderData
-
-    );
-
+    const response = await api.post("/payment/cod", orderData);
     return response.data;
-
 };
-
-/*
-==================================
-Save Payment
-==================================
-*/
-
-export const savePayment = async (paymentData) => {
-
-    const response = await axios.post(
-
-        `${API}/save-payment`,
-
-        paymentData
-
-    );
-
-    return response.data;
-
-};
-
-/*
-==================================
-Get Payment History
-==================================
-*/
 
 export const getPaymentHistory = async () => {
-
-    const response = await axios.get(
-
-        `${API}/history`
-
-    );
-
+    const response = await api.get("/payment/history");
     return response.data;
-
 };

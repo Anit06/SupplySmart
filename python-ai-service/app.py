@@ -3,13 +3,11 @@ import json
 import os
 
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 import joblib
 import pandas as pd
 from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
-CORS(app)
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -129,6 +127,18 @@ def health():
     if model is None:
         return jsonify({"status": "Model Not Loaded"}), 500
     return jsonify({"status": "Healthy", "modelFormat": "rolling-window" if model_metadata else "legacy"})
+
+
+@app.route("/health/live", methods=["GET"])
+def liveness():
+    return jsonify({"status": "live"})
+
+
+@app.route("/health/ready", methods=["GET"])
+def readiness():
+    if model is None:
+        return jsonify({"status": "not_ready", "dependency": "model"}), 503
+    return jsonify({"status": "ready"})
 
 
 @app.route("/reload-model", methods=["POST"])

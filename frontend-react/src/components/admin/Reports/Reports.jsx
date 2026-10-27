@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import Sidebar from "../../common/Sidebar";
-import Header from "../../common/Header";
 
 import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 

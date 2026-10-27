@@ -8,6 +8,7 @@ import {
 } from "../../../services/cartService";
 
 import { getWarehouseById } from "../../../services/warehouseService";
+import { getBackendAssetUrl } from "../../../services/api";
 
 import "../../../assets/css/placeOrder.css";
 
@@ -20,7 +21,6 @@ function Cart() {
         cartTotal: 0
     });
     const [loading, setLoading] = useState(true);
-    const [placingOrder, setPlacingOrder] = useState(false);
 
     const loadCart = async () => {
         try {
@@ -54,8 +54,32 @@ function Cart() {
     };
 
     useEffect(() => {
-        loadCart();
-    }, []);
+        const warehouseId = localStorage.getItem("selectedWarehouse");
+        if (!warehouseId) {
+            navigate("/shopkeeper/product-catalog");
+            return;
+        }
+        let active = true;
+
+        getWarehouseById(warehouseId)
+            .then((warehouseResponse) => {
+                if (active) setWarehouse(warehouseResponse.warehouse || warehouseResponse);
+                return getCart(warehouseId);
+            })
+            .then((cartResponse) => {
+                if (active) {
+                    setCart(cartResponse.cart || { items: [], cartTotal: 0 });
+                }
+            })
+            .catch((error) => console.log(error))
+            .finally(() => {
+                if (active) setLoading(false);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [navigate]);
 
     const increaseQuantity = async (item) => {
         await updateCart({
@@ -121,7 +145,7 @@ function Cart() {
                                     className="cart-image"
                                     src={
                                         item.image
-                                            ? `http://localhost:5000/${item.image}`
+                                            ? getBackendAssetUrl(item.image)
                                             : "https://placehold.co/200x200?text=No+Image"
                                     }
                                     alt={item.productName}
@@ -175,9 +199,8 @@ function Cart() {
                         <button
                             className="checkout-btn"
                             onClick={handlePlaceOrder}
-                            disabled={placingOrder}
                         >
-                            {placingOrder ? "Placing Order..." : "Place Order"}
+                            Place Order
                         </button>
                     </div>
                 </>

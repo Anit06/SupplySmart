@@ -1,8 +1,5 @@
 import { useState } from "react";
 import {
-  FaShippingFast,
-  FaUndoAlt,
-  FaComments,
   FaPhoneAlt,
   FaEnvelope,
   FaMapMarkerAlt,
@@ -11,16 +8,7 @@ import {
 import "../../../assets/css/support.css"; // Adjust path to match your project folder structure
 
 function Support() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    orderId: "",
-    subject: "General Inquiry",
-    message: "",
-  });
-
   const [activeFaq, setActiveFaq] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
 
   const faqs = [
     {
@@ -48,25 +36,6 @@ function Support() {
         "Orders can be cancelled or modified within 1 hour of placing them via the Order History page or by contacting our live support team.",
     },
   ];
-
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({
-        name: "",
-        email: "",
-        orderId: "",
-        subject: "General Inquiry",
-        message: "",
-      });
-    }, 4000);
-  };
 
   const toggleFaq = (id) => {
     setActiveFaq(activeFaq === id ? null : id);

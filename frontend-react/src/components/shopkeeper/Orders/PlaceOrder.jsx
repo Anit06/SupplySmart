@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
     getCart,
     placeOrder
 } from "../../../services/cartService";
+import { createOrder as createRazorpayOrder, verifyPayment } from "../../../services/paymentService";
 
 import { getWarehouseById } from "../../../services/warehouseService";
 import { getProfile } from "../../../services/shopkeeperService";
@@ -40,6 +41,18 @@ const formatAddress = (address) => {
         .join(", ");
 };
 
+const loadRazorpay = () => new Promise((resolve, reject) => {
+    if (window.Razorpay) {
+        resolve();
+        return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Unable to load Razorpay Checkout."));
+    document.body.appendChild(script);
+});
+
 function PlaceOrder() {
     const navigate = useNavigate();
 
@@ -53,66 +66,55 @@ function PlaceOrder() {
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [couponMessage, setCouponMessage] = useState("");
     const [discountAmount, setDiscountAmount] = useState(0);
-    const [originalTotal, setOriginalTotal] = useState(0);
-    const [gstAmount, setGstAmount] = useState(0);
-    const [finalAmount, setFinalAmount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [placingOrder, setPlacingOrder] = useState(false);
+    const submissionInProgress = useRef(false);
+
+    const originalTotal = cart.cartTotal || 0;
+    const taxableAmount = Math.max(originalTotal - discountAmount, 0);
+    const gstAmount = useMemo(() => Math.round(taxableAmount * 0.18), [taxableAmount]);
+    const finalAmount = taxableAmount + gstAmount;
 
     useEffect(() => {
-        const subtotal = cart.cartTotal || 0;
-        setOriginalTotal(subtotal);
-
-        // Calculate taxable amount after discount
-        const taxableAmount = Math.max(subtotal - discountAmount, 0);
-
-        // Calculate 18% GST
-        const calculatedGst = Math.round(taxableAmount * 0.18);
-        setGstAmount(calculatedGst);
-
-        // Calculate Final Total: Subtotal - Discount + 18% GST
-        setFinalAmount(taxableAmount + calculatedGst);
-    }, [cart.cartTotal, discountAmount]);
-
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const loadData = async () => {
-        try {
-            const warehouseId = localStorage.getItem("selectedWarehouse");
-
-            if (!warehouseId) {
-                navigate("/shopkeeper/cart");
-                return;
-            }
-
-            const [warehouseResp, cartResp] = await Promise.all([
-                getWarehouseById(warehouseId),
-                getCart(warehouseId)
-            ]);
-
-            setWarehouse(warehouseResp.warehouse || warehouseResp);
-            setCart(cartResp.cart || { items: [], cartTotal: 0 });
-
-            const user = JSON.parse(localStorage.getItem("user") || "{}") || {};
-            if (!user.id) return;
-
-            const profileResp = await getProfile(user.id);
-            const shopProfile = profileResp.data.profile;
-            const savedAddresses = shopProfile.addresses || [];
-            setAddresses(savedAddresses);
-
-            if (savedAddresses.length > 0) {
-                const defaultAddress = savedAddresses.find((item) => item.isDefault) || savedAddresses[0];
-                setSelectedAddressId(defaultAddress._id);
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
+        const warehouseId = localStorage.getItem("selectedWarehouse");
+        if (!warehouseId) {
+            navigate("/shopkeeper/cart");
+            return;
         }
-    };
+        let active = true;
+
+        Promise.all([
+            getWarehouseById(warehouseId),
+            getCart(warehouseId)
+        ])
+            .then(([warehouseResp, cartResp]) => {
+                if (!active) return;
+                setWarehouse(warehouseResp.warehouse || warehouseResp);
+                setCart(cartResp.cart || { items: [], cartTotal: 0 });
+
+                const user = JSON.parse(localStorage.getItem("user") || "{}") || {};
+                if (!user.id) return null;
+                return getProfile(user.id);
+            })
+            .then((profileResp) => {
+                if (!active || !profileResp) return;
+                const savedAddresses = profileResp.data.profile.addresses || [];
+                setAddresses(savedAddresses);
+                if (savedAddresses.length > 0) {
+                    const defaultAddress =
+                        savedAddresses.find((item) => item.isDefault) || savedAddresses[0];
+                    setSelectedAddressId(defaultAddress._id);
+                }
+            })
+            .catch((error) => console.error(error))
+            .finally(() => {
+                if (active) setLoading(false);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [navigate]);
 
     const currentAddress = addresses.find((address) => address._id === selectedAddressId) || addresses[0] || null;
 
@@ -184,6 +186,7 @@ function PlaceOrder() {
     };
 
     const handlePlaceOrder = async () => {
+        if (submissionInProgress.current) return;
         if (!cart.items.length) {
             alert("Your cart is empty.");
             return;
@@ -194,10 +197,20 @@ function PlaceOrder() {
             return;
         }
 
+        submissionInProgress.current = true;
         try {
             setPlacingOrder(true);
+            const warehouseId = localStorage.getItem("selectedWarehouse");
+            const storageKey = `pendingCheckout:${warehouseId}`;
+            let checkoutId = sessionStorage.getItem(storageKey);
+            if (!checkoutId) {
+                checkoutId = window.crypto.randomUUID();
+                sessionStorage.setItem(storageKey, checkoutId);
+            }
+
             const response = await placeOrder({
-                warehouseId: localStorage.getItem("selectedWarehouse"),
+                warehouseId,
+                checkoutId,
                 paymentMethod,
                 couponCode: appliedCoupon?.code || "",
                 discountAmount,
@@ -207,12 +220,108 @@ function PlaceOrder() {
                 addressId: currentAddress._id
             });
 
-            alert(response.message || "Order placed successfully");
-            localStorage.removeItem("selectedWarehouse");
-            navigate("/shopkeeper/order-history");
+            const order = response.order;
+            if (!order?._id) {
+                throw new Error("The server did not return the created order.");
+            }
+
+            if (paymentMethod === "Cash On Delivery") {
+                alert(response.message || "Order placed successfully");
+                sessionStorage.removeItem(storageKey);
+                localStorage.removeItem("selectedWarehouse");
+                navigate("/shopkeeper/order-history");
+                return;
+            }
+
+            const paymentAttemptKey = `paymentAttempt:${order._id}`;
+            let paymentAttemptId = sessionStorage.getItem(paymentAttemptKey);
+            if (!paymentAttemptId) {
+                paymentAttemptId = window.crypto.randomUUID();
+                sessionStorage.setItem(paymentAttemptKey, paymentAttemptId);
+            }
+
+            let paymentOrder;
+            try {
+                paymentOrder = await createRazorpayOrder(order._id, paymentAttemptId);
+            } catch (error) {
+                if (error.response?.data?.code !== "PAYMENT_ATTEMPT_FAILED") {
+                    throw error;
+                }
+                paymentAttemptId = window.crypto.randomUUID();
+                sessionStorage.setItem(paymentAttemptKey, paymentAttemptId);
+                paymentOrder = await createRazorpayOrder(order._id, paymentAttemptId);
+            }
+            if (
+                typeof paymentOrder?.order?.id !== "string"
+                || !paymentOrder.order.id
+                || typeof paymentOrder.order.keyId !== "string"
+                || !Number.isSafeInteger(paymentOrder.order.amount)
+                || paymentOrder.order.amount < 1
+                || paymentOrder.order.currency !== "INR"
+            ) {
+                throw new Error("The payment provider order is not ready. Your existing attempt is protected; try again shortly.");
+            }
+            await loadRazorpay();
+
+            const checkout = new window.Razorpay({
+                key: paymentOrder.order.keyId,
+                amount: paymentOrder.order.amount,
+                currency: paymentOrder.order.currency,
+                name: "AI Supply Chain Management",
+                description: `Payment for order ${order.orderNumber}`,
+                order_id: paymentOrder.order.id,
+                prefill: {
+                    name: order.shopkeeperName,
+                    contact: order.shopkeeperPhone
+                },
+                handler: async (providerResponse) => {
+                    try {
+                        const verification = await verifyPayment({
+                            orderId: order._id,
+                            razorpay_order_id: providerResponse.razorpay_order_id,
+                            razorpay_payment_id: providerResponse.razorpay_payment_id,
+                            razorpay_signature: providerResponse.razorpay_signature
+                        });
+                        if (verification.paid) {
+                            sessionStorage.removeItem(storageKey);
+                            sessionStorage.removeItem(paymentAttemptKey);
+                            localStorage.removeItem("selectedWarehouse");
+                            alert(verification.reconciliationPending
+                                ? "Payment verified. Inventory reconciliation is in progress; your order will be updated shortly."
+                                : "Payment verified successfully.");
+                            navigate("/shopkeeper/order-history");
+                            return;
+                        }
+                        if (verification.paymentStatus === "Failed") {
+                            sessionStorage.removeItem(paymentAttemptKey);
+                        }
+                        alert("Payment is not yet confirmed. Your order and reserved stock have been retained while its status is checked.");
+                    } catch (error) {
+                        alert(error.response?.data?.message || "Payment verification is pending. Do not submit another payment; check your order status.");
+                    }
+                },
+                modal: {
+                    ondismiss: () => {
+                        alert("Payment was not confirmed. Your order and stock reservation are retained; you can safely retry checkout.");
+                    }
+                },
+                theme: { color: "#2563eb" }
+            });
+            setPlacingOrder(false);
+            checkout.open();
         } catch (error) {
-            alert(error.response?.data?.message || error.message || "Unable to place order.");
+            if (["CHECKOUT_EXPIRED", "CHECKOUT_RETRY_NEW_ID"].includes(error.response?.data?.code)) {
+                const warehouseId = localStorage.getItem("selectedWarehouse");
+                sessionStorage.removeItem(`pendingCheckout:${warehouseId}`);
+            }
+            const responseCode = error.response?.data?.code;
+            const requestId = error.response?.headers?.["x-request-id"];
+            const message = error.response?.data?.message || error.message || "Unable to place order.";
+            alert(["PAYMENT_ORDER_UNRESOLVED", "RAZORPAY_ORDER_CREATION_FAILED"].includes(responseCode) && requestId
+                ? `${message} Support reference: ${requestId}.`
+                : message);
         } finally {
+            submissionInProgress.current = false;
             setPlacingOrder(false);
         }
     };
@@ -298,12 +407,9 @@ function PlaceOrder() {
                         </div>
                         <div className="payment-options">
                             {[
-                                "Cash On Delivery",
-                                "UPI",
-                                "Credit Card",
-                                "Debit Card",
-                                "Net Banking"
-                            ].map((method) => (
+                                    "Cash On Delivery",
+                                    "Razorpay"
+                                ].map((method) => (
                                 <label key={method} className={`payment-option ${paymentMethod === method ? "active" : ""}`}>
                                     <input
                                         type="radio"
@@ -312,7 +418,7 @@ function PlaceOrder() {
                                         checked={paymentMethod === method}
                                         onChange={() => setPaymentMethod(method)}
                                     />
-                                    <span>{method}</span>
+                                    <span>{method === "Razorpay" ? "Razorpay (UPI, cards, net banking)" : method}</span>
                                 </label>
                             ))}
                         </div>
@@ -386,7 +492,7 @@ function PlaceOrder() {
                             onClick={handlePlaceOrder}
                             disabled={!currentAddress || placingOrder}
                         >
-                            {placingOrder ? "Placing order..." : `Place Order ₹${finalAmount}`}
+                            {placingOrder ? "Preparing secure checkout..." : paymentMethod === "Cash On Delivery" ? `Place Order ₹${finalAmount}` : `Pay securely ₹${finalAmount}`}
                         </button>
                     </div>
                 </aside>

@@ -1,8 +1,16 @@
 const jwt = require("jsonwebtoken");
 
 const authMiddleware = (req, res, next) => {
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    return res.status(503).json({
+      success: false,
+      message: "Authentication is not configured",
+    });
+  }
+
   try {
-    // Read Authorization Header
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
@@ -12,20 +20,17 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-    // Token format: Bearer xxxxxxxxx
-    const token = authHeader.split(" ")[1];
+    const [scheme, token, ...extra] = authHeader.split(" ");
+    if (scheme !== "Bearer" || !token || extra.length > 0) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid Token",
+      });
+    }
 
-    // Verify Token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "cdac-secret-key",
-    );
-
-    // Store user details in request
-    req.user = decoded;
-
+    req.user = jwt.verify(token, jwtSecret);
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({
       success: false,
       message: "Invalid Token",

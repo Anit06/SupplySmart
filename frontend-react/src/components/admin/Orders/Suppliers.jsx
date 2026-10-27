@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../../common/Sidebar";
-import Header from "../../common/Header";
 import "../../../assets/css/supplier.css";
 import {  FaEdit, FaTrash } from "react-icons/fa";
 import {
@@ -41,7 +40,18 @@ function Suppliers() {
   };
 
   useEffect(() => {
-    loadSuppliers();
+    let active = true;
+    getSuppliers()
+      .then((data) => {
+        if (active && data.success) {
+          setSuppliers(data.supplier);
+        }
+      })
+      .catch((error) => console.log(error));
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleChange = (e) => {

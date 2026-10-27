@@ -28,10 +28,14 @@ function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-top">
         <div className="sidebar-logo">
-          <div className="logo-icon">📦</div>
+          <img
+            src="/images/supplysmart-logo.png"
+            alt="SupplySmart logo"
+            className="brand-logo brand-logo--sidebar"
+          />
           <div className="logo-text">
-            <h1>AI Supply Chain</h1>
-            <p>Management System</p>
+            <h1>SupplySmart</h1>
+            <p>Smart Logistics</p>
           </div>
         </div>
 
@@ -59,7 +63,7 @@ function Sidebar() {
         <div className="profile-image">👨</div>
         <div>
           <h3>Admin</h3>
-          <p>Super Admin</p>
+          <p>Operations</p>
         </div>
       </div>
     </aside>

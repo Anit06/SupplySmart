@@ -38,24 +38,46 @@ function Profile() {
       });
     }
   };
-  const fetchCategories = async () => {
-  try {
-    const response = await getProductCategories();
-
-    const options = response.data.categories.map((category) => ({
-      value: category,
-      label: category,
-    }));
-
-    setCategoryOptions(options);
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-  }
-};
-
   useEffect(() => {
-    fetchProfile();
-     fetchCategories();
+    let active = true;
+    const user = JSON.parse(localStorage.getItem("user") || "{}") || {};
+    if (user.id) {
+      getProfile(user.id)
+        .then((response) => {
+          if (!active) return;
+          const profile = response.data.profile;
+          setUserId(user.id);
+          setFormData({
+            fullName: profile.fullName || "",
+            email: profile.userId?.email || "",
+            phone: profile.phone || "",
+            shopCategory: profile.shopCategory || [],
+          });
+        })
+        .catch((error) => {
+          console.error("Error fetching profile:", error);
+          if (active) {
+            setFeedback({
+              type: "error",
+              message: "Unable to load your profile right now.",
+            });
+          }
+        });
+    }
+
+    getProductCategories()
+      .then((response) => {
+        const options = response.data.categories.map((category) => ({
+          value: category,
+          label: category,
+        }));
+        if (active) setCategoryOptions(options);
+      })
+      .catch((error) => console.error("Error fetching categories:", error));
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleChange = (e) => {

@@ -29,13 +29,13 @@ function Warehouses() {
     loadWarehouses();
   }, []);
 
-  const loadWarehouses = async () => {
+  async function loadWarehouses() {
     const data = await getWarehouses();
 
     if (data.success) {
       setWarehouses(data.warehouses);
     }
-  };
+  }
 
   const handleAdd = async (warehouse) => {
     const data = await addWarehouse(warehouse);

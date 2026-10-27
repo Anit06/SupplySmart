@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { API_BASE_URL } from "../services/api";
 
 import "../assets/css/auth.css";
 
@@ -17,7 +18,7 @@ function Login() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/auth/login",
+        `${API_BASE_URL}/auth/login`,
         {
           method: "POST",
           headers: {
@@ -30,12 +31,40 @@ function Login() {
         }
       );
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data = null;
+      if (responseText.trim()) {
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          if (response.ok) {
+            throw new Error("The server returned an invalid login response.");
+          }
+        }
+      }
 
       if (!response.ok) {
-        alert(data.message);
-        setLoading(false);
+        const statusMessages = {
+          400: "Please check your email and password.",
+          401: "Invalid email or password.",
+          404: "Login endpoint or account was not found.",
+          500: "The server encountered an error. Please try again later."
+        };
+        alert(
+          typeof data?.message === "string" && data.message.trim()
+            ? data.message
+            : statusMessages[response.status] || `Login failed (${response.status}).`
+        );
         return;
+      }
+
+      if (
+        !data
+        || typeof data.token !== "string"
+        || !data.user
+        || !["admin", "administrative_user", "user"].includes(data.user.role)
+      ) {
+        throw new Error("The server returned an incomplete login response.");
       }
 
       localStorage.setItem("token", data.token);
@@ -69,12 +98,14 @@ function Login() {
       }
 
     } catch (error) {
-      console.error(error);
-
-      alert("Login Failed");
+      alert(
+        error instanceof TypeError
+          ? "Unable to reach the server. Check your connection and try again."
+          : error.message || "Login failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -82,7 +113,16 @@ function Login() {
 
       <div className="auth-box">
 
-        <h1>Sign In</h1>
+        <div className="auth-branding" aria-label="SupplySmart brand">
+          <img
+            src="/images/supplysmart-logo.png"
+            alt="SupplySmart logo"
+            className="auth-logo"
+          />
+          <h1>SupplySmart</h1>
+        </div>
+
+        <p className="auth-subtitle">Smart Supply Chain Management</p>
 
         <form onSubmit={handleLogin}>
 

@@ -1,7 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "./api";
 
-const API =
-  "http://localhost:5000/api/products";
+const API = `${API_BASE_URL}/products`;
 
 export const getProducts =
   async () => {
@@ -18,7 +18,7 @@ export const addProduct = async (
 
   const response =
     await axios.post(
-      "http://localhost:5000/api/products",
+      API,
       productData,
       {
         headers: {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaPlus,
   FaSearch,
@@ -30,6 +30,14 @@ import {
 } from "../../../services/productService";
 
 import "../../../assets/css/warehouse.css";
+
+const getProductUnallocatedStock = (productObj) => {
+  if (!productObj) return 0;
+  if (productObj.stock !== undefined) return Number(productObj.stock);
+  if (productObj.availableStock !== undefined) return Number(productObj.availableStock);
+  if (productObj.quantity !== undefined) return Number(productObj.quantity);
+  return 0;
+};
 
 function InventoryView() {
   const { warehouseId } = useParams();
@@ -77,22 +85,6 @@ function InventoryView() {
     return products.find(p => (p._id || p.id) === editItem.productId) || null;
   }, [editItem, products]);
 
-  // Safely extract the current unallocated pool stock from the backend product object
-  const getProductUnallocatedStock = (productObj) => {
-    if (!productObj) return 0;
-    // Tries to look up typical stock fields. Employs 0 instead of 500 if missing.
-    if (productObj.stock !== undefined) return Number(productObj.stock);
-    if (productObj.availableStock !== undefined) return Number(productObj.availableStock);
-    if (productObj.quantity !== undefined) return Number(productObj.quantity);
-    return 0;
-  };
-
-  useEffect(() => {
-    if (!warehouseId) return;
-    loadWarehouse();
-    loadInventory();
-  }, [warehouseId]);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setProductSearchLoading(true);
@@ -119,21 +111,7 @@ function InventoryView() {
     return () => clearTimeout(timer);
   }, [productSearch, products, inventory]);
 
-  const loadWarehouse = async () => {
-    try {
-      const response = await getWarehouseById(warehouseId);
-      if (response.success) {
-        setWarehouse(response.warehouse);
-      }
-    } catch (error) {
-      setToast({
-        message: "Failed to load warehouse",
-        type: "error"
-      });
-    }
-  };
-
-  const loadInventory = async () => {
+  const loadInventory = useCallback(async () => {
     try {
       setLoading(true);
       const inventoryResponse = await getInventory(warehouseId);
@@ -168,7 +146,52 @@ function InventoryView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [warehouseId]);
+
+  useEffect(() => {
+    if (!warehouseId) return;
+    let active = true;
+    Promise.all([
+      getWarehouseById(warehouseId),
+      getInventory(warehouseId),
+      getProducts()
+    ])
+      .then(([warehouseResponse, inventoryResponse, productResponse]) => {
+        if (!active) return;
+        if (warehouseResponse.success) setWarehouse(warehouseResponse.warehouse);
+        const inventoryList = inventoryResponse.data || inventoryResponse || [];
+        const productList = productResponse.success ? productResponse.products : [];
+        setProducts(productList);
+        setInventory(inventoryList.map((item) => {
+          const product = productList.find((entry) =>
+            (entry._id || entry.id) === item.productId
+          );
+          return {
+            ...item,
+            sku: product?.sku || item.sku || "-",
+            productName: product?.name || item.productName || "-",
+            category: product?.category || item.category || "-",
+            unit: product?.unit || item.unit || "",
+            availableStock: product ? getProductUnallocatedStock(product) : 0
+          };
+        }));
+      })
+      .catch((error) => {
+        if (active) {
+          setToast({
+            message: error.response?.data?.message || "Failed to load inventory",
+            type: "error"
+          });
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [warehouseId]);
 
   const handleAddInventory = async (event) => {
     event.preventDefault();

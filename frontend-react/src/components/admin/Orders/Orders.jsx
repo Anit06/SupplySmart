@@ -19,7 +19,7 @@ function Orders() {
         loadOrders();
     }, []);
 
-    const loadOrders = async () => {
+    async function loadOrders() {
         try {
             const [orderResponse, analyticsResponse] = await Promise.all([
                 getAllOrders(),
@@ -33,7 +33,7 @@ function Orders() {
         } finally {
             setLoading(false);
         }
-    };
+    }
 
     if (loading) {
         return <h2>Loading...</h2>;

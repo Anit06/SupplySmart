@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+venv
+*.venv
+data
+train_model.py
+predict_console.py

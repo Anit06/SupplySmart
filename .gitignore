@@ -1,4 +1,11 @@
-# Node
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.compose.example
+
+# Node.js
 node_modules/
 
 # React
@@ -9,18 +16,21 @@ frontend-react/dist/
 # Java / Maven
 java-inventory-service/target/
 
-# Backend uploads
-backend-node/uploads/
-
-# IDE
-.vscode/
-
-# Java crash logs
-hs_err_pid*.log
-
-# Python Virtual Environments
+# Python
 venv/
+.venv/
 *.venv
 python-ai-service/venv/
 __pycache__/
 *.pyc
+
+# Backend uploads and archives
+backend-node/uploads/
+supply-chain.archive
+
+# IDE and logs
+.vscode/
+hs_err_pid*.log
+
+# Local Java startup logs
+java-inventory-service/*.log

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { API_BASE_URL } from "../services/api";
 
 import "../assets/css/auth.css";
 
@@ -31,7 +32,7 @@ function Register() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/auth/register",
+        `${API_BASE_URL}/auth/register`,
         {
           method: "POST",
           headers: {
@@ -53,7 +54,7 @@ function Register() {
         return;
       }
 
-      alert("Registration Successful");
+      alert("Account created. Please sign in with your credentials.");
 
       navigate("/");
 
@@ -68,7 +69,16 @@ function Register() {
 
       <div className="auth-box">
 
-        <h1>Create Account</h1>
+        <div className="auth-branding" aria-label="SupplySmart brand">
+          <img
+            src="/images/supplysmart-logo.png"
+            alt="SupplySmart logo"
+            className="auth-logo"
+          />
+          <h1>SupplySmart</h1>
+        </div>
+
+        <p className="auth-subtitle">Create your account</p>
 
         <form onSubmit={handleRegister}>
 

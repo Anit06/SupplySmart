@@ -213,10 +213,7 @@ AI-Supply-Chain-Management-System/
                 authController.js
                 cartController.js
                 catalogController.js
-<<<<<<< HEAD
-=======
                 historyController.js 
->>>>>>> 8ebc819e3df109c552f8e25d6c537d085fc18a78
                 inventoryController.js
                 orderController.js
                 productController.js
@@ -252,10 +249,7 @@ AI-Supply-Chain-Management-System/
                 authRoutes.js
                 cartRoutes.js
                 catelogRoutes.js
-<<<<<<< HEAD
-=======
                 historyRoutes.js 
->>>>>>> 8ebc819e3df109c552f8e25d6c537d085fc18a78
                 inventoryRoutes.js
                 orderRoutes.js
                 productRoutes.js
@@ -266,32 +260,15 @@ AI-Supply-Chain-Management-System/
                 warehouseRoutes.js
 
             services/
-<<<<<<< HEAD
-=======
                 aiDemandService.js
                 aiTrainingService.js
                 historyGeneratorService.js
->>>>>>> 8ebc819e3df109c552f8e25d6c537d085fc18a78
                 cartService.js
                 orderService.js 
                 javaService.js
                 pythonAIService.js
-<<<<<<< HEAD
-=======
                 predictionService.js
->>>>>>> 8ebc819e3df109c552f8e25d6c537d085fc18a78
                 notificationService.js
-
-    docs/
-
-        folder-structure.txt
-
-    Notes:
-        - User stores authentication-only data.
-        - Shopkeeper profile and addresses are stored in ShopkeeperDetails.
-        - Shopkeeper addresses support multiple entries with one default address.
-        - Frontend shopkeeper profile page uses profile CRUD APIs and address page uses address CRUD APIs.
-
                 Warehouse.js
                 Inventory.js
                 Order.js
@@ -330,6 +307,10 @@ AI-Supply-Chain-Management-System/
                 logger.js
                 responseHandler.js
                 jwtHelper.js
+
+    docs/
+
+        folder-structure.txt
 
     java-inventory-service/
 
@@ -392,28 +373,6 @@ AI-Supply-Chain-Management-System/
 
             monthly_sales_history.csv
 
-    dotnet-report-service/
-
-        Program.cs
-        appsettings.json
-        SupplyChainReportService.csproj
-
-        Controllers/
-
-            ReportController.cs
-
-        Services/
-
-            PdfReportService.cs
-            ExcelReportService.cs
-            WarehouseAnalyticsService.cs
-            SalesAnalyticsService.cs
-
-        Models/
-
-            Report.cs
-            Analytics.cs
-
     database/
 
         mongodb/
@@ -430,16 +389,6 @@ AI-Supply-Chain-Management-System/
                 orders.json
 
         backups/
-
-    docs/
-
-        architecture-diagram.png
-        system-flowchart.png
-        api-documentation.md
-        database-design.png
-        project-report.docx
-        presentation.pptx
-        deployment-guide.md
 
     deployment/
 

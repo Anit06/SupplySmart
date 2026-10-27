@@ -6,7 +6,6 @@ function AddressModal({
   onSubmit,
   initialData,
   loading,
-  hasDefaultAddress,
 }) {
     if (!show) return null;
 
@@ -17,7 +16,13 @@ function AddressModal({
                     <h2>{initialData ? "Edit Address" : "Add New Address"}</h2>
                     <button className="close-btn" onClick={onClose}>✕</button>
                 </div>
-            <AddressForm  show={show} onClose={onClose} onSave={onSubmit} initialData={initialData} hasDefaultAddress={hasDefaultAddress}/>             
+            <AddressForm
+                show={show}
+                onClose={onClose}
+                onSave={onSubmit}
+                initialData={initialData}
+                loading={loading}
+            />
             </div>
         </div>
     );

@@ -107,12 +107,24 @@ exports.getWarehouseCatalog = async (req, res) => {
       products: catalog,
     });
   } catch (error) {
-    console.log(error);
+    const isJavaServiceError =
+      typeof error.code === "string" && error.code.startsWith("JAVA_SERVICE_");
+    const statusCode = isJavaServiceError
+      ? error.statusCode || 503
+      : 500;
 
-    return res.status(500).json({
+    console.error(JSON.stringify({
+      event: "inventory_catalog_request_failed",
+      errorCode: String(error.code || error.name || "INVENTORY_SERVICE_ERROR").slice(0, 80),
+      statusCode: error.response?.status || statusCode,
+      requestId: req.requestId || null
+    }));
+
+    return res.status(statusCode).json({
       success: false,
-
-      message: error.message,
+      message: isJavaServiceError
+        ? error.message
+        : "Unable to load product catalog",
     });
   }
 };

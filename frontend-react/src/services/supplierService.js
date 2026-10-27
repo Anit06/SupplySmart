@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "./api";
 
-const API = "http://localhost:5000/api/suppliers";
+const API = `${API_BASE_URL}/suppliers`;
 
 export const getSuppliers = async () => {
     const res = await axios.get(API);

@@ -1,6 +1,6 @@
 .sidebar {
   width: 260px;
-  background: linear-gradient(180deg, #021437 0%, #031d4f 100%);
+  background: linear-gradient(180deg, #08172d 0%, #102a4b 100%);
   color: white;
   padding: 18px 16px;
   display: flex;
@@ -25,19 +25,25 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
-  min-height: 48px;
+  min-height: 56px;
+  padding: 2px 6px;
 }
 
-.logo-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 20px;
+.brand-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  display: block;
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.brand-logo--sidebar {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
 }
 
 .logo-text h1 {
@@ -101,6 +107,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   margin-top: 5px;
+  background: rgba(148, 163, 184, 0.08);
 }
 
 .profile-image {
@@ -125,4 +132,21 @@
   font-size: 12px;
   color: #d1d5db;
   margin: 2px 0 0 0;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    padding: 14px 12px 18px;
+  }
+
+  .sidebar-top {
+    gap: 12px;
+  }
+
+  .sidebar-menu {
+    gap: 6px;
+  }
 }

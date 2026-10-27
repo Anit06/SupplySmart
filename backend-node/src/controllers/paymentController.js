@@ -1,227 +1,108 @@
 const paymentService = require("../services/paymentService");
+const { recordPaymentVerificationFailure } = require("../services/observability");
 
-/*
-==========================================
-Create Razorpay Order
-==========================================
-*/
+const handleError = (res, error) => {
+    const statusCode = Number(error.statusCode) || 500;
+    if (statusCode >= 500) {
+        console.error(JSON.stringify({
+            event: "payment_request_failed",
+            errorCode: String(error.code || error.name || "PAYMENT_ERROR").slice(0, 80)
+        }));
+    }
+    return res.status(statusCode).json({
+        success: false,
+        code: error.code || "PAYMENT_ERROR",
+        message: statusCode >= 500 && error.code !== "RAZORPAY_ORDER_CREATION_FAILED"
+            ? "Payment could not be completed. Please retry safely."
+            : error.message
+    });
+};
 
 exports.createOrder = async (req, res) => {
-
     try {
-
-        const { amount } = req.body;
-
-        const order = await paymentService.createOrder(amount);
-
-        return res.status(200).json({
-
-            success: true,
-
-            message: "Order Created Successfully",
-
-            order
-
+        const order = await paymentService.createPaymentOrder({
+            userId: req.user.id,
+            orderId: req.body?.orderId,
+            attemptId: req.body?.attemptId,
+            requestId: req.requestId
         });
-
+        return res.status(200).json({ success: true, order });
     } catch (error) {
-
-        console.log(error);
-
-        return res.status(500).json({
-
-            success: false,
-
-            message: error.message
-
-        });
-
+        return handleError(res, error);
     }
-
 };
 
-
-/*
-==========================================
-Verify Razorpay Payment
-==========================================
-*/
+exports.resolveUnknownAttempt = async (req, res) => {
+    try {
+        if (req.body?.providerOutcome !== "NO_ORDER_CONFIRMED") {
+            return res.status(400).json({
+                success: false,
+                code: "INVALID_RECONCILIATION_OUTCOME",
+                message: "Confirm the Dashboard-verified absence of a Razorpay order."
+            });
+        }
+        const result = await paymentService.resolveUnknownPaymentAttempt({
+            orderId: req.body?.orderId,
+            attemptId: req.body?.attemptId,
+            adminId: req.user.id,
+            evidenceReference: req.body?.evidenceReference,
+            requestId: req.requestId
+        });
+        return res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        return handleError(res, error);
+    }
+};
 
 exports.verifyPayment = async (req, res) => {
-
     try {
-
-        const verified = await paymentService.verifyPayment(req.body);
-
-        if (!verified) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message: "Payment Verification Failed"
-
-            });
-
-        }
-
-        await paymentService.savePayment({
-
+        const result = await paymentService.verifyAndFinalize({
             userId: req.user.id,
-
-            orderId: req.body.orderId,
-
-            amount: req.body.amount,
-
-            paymentMethod: "Razorpay",
-
-            paymentStatus: "Success",
-
-            razorpayOrderId: req.body.razorpay_order_id,
-
-            razorpayPaymentId: req.body.razorpay_payment_id,
-
-            razorpaySignature: req.body.razorpay_signature,
-
-            transactionId: req.body.razorpay_payment_id
-
+            orderId: req.body?.orderId,
+            razorpay_order_id: req.body?.razorpay_order_id,
+            razorpay_payment_id: req.body?.razorpay_payment_id,
+            razorpay_signature: req.body?.razorpay_signature
         });
-
-        return res.status(200).json({
-
+        return res.status(result.paid ? 200 : 202).json({
             success: true,
-
-            message: "Payment Successful"
-
+            ...result
         });
-
     } catch (error) {
-
-        console.log(error);
-
-        return res.status(500).json({
-
-            success: false,
-
-            message: error.message
-
-        });
-
+        recordPaymentVerificationFailure();
+        return handleError(res, error);
     }
-
 };
 
-
-/*
-==========================================
-Cash On Delivery
-==========================================
-*/
+exports.webhook = async (req, res) => {
+    try {
+        const result = await paymentService.processWebhook({
+            rawBody: req.body,
+            signature: req.get("x-razorpay-signature"),
+            eventId: req.get("x-razorpay-event-id")
+        });
+        return res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        return handleError(res, error);
+    }
+};
 
 exports.cashOnDelivery = async (req, res) => {
-
     try {
-
         await paymentService.cashOnDelivery({
-
             userId: req.user.id,
-
-            orderId: req.body.orderId,
-
-            amount: req.body.amount
-
+            orderId: req.body?.orderId
         });
-
-        return res.status(200).json({
-
-            success: true,
-
-            message: "Cash On Delivery Selected"
-
-        });
-
+        return res.status(200).json({ success: true, message: "Cash On Delivery Selected" });
     } catch (error) {
-
-        console.log(error);
-
-        return res.status(500).json({
-
-            success: false,
-
-            message: error.message
-
-        });
-
+        return handleError(res, error);
     }
-
 };
-
-
-/*
-==========================================
-Save Payment
-==========================================
-*/
-
-exports.savePayment = async (req, res) => {
-
-    try {
-
-        const payment = await paymentService.savePayment(req.body);
-
-        return res.status(201).json({
-
-            success: true,
-
-            payment
-
-        });
-
-    } catch (error) {
-
-        return res.status(500).json({
-
-            success: false,
-
-            message: error.message
-
-        });
-
-    }
-
-};
-
-
-/*
-==========================================
-Payment History
-==========================================
-*/
 
 exports.getPaymentHistory = async (req, res) => {
-
     try {
-
         const payments = await paymentService.getPaymentHistory(req.user.id);
-
-        return res.status(200).json({
-
-            success: true,
-
-            payments
-
-        });
-
+        return res.status(200).json({ success: true, payments });
     } catch (error) {
-
-        return res.status(500).json({
-
-            success: false,
-
-            message: error.message
-
-        });
-
+        return handleError(res, error);
     }
-
 };

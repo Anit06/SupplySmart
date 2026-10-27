@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../../assets/css/payment.css";
 
@@ -9,9 +8,6 @@ const Payment = () => {
 
     const cart = location.state?.cart;
 
-    const [paymentMethod, setPaymentMethod] = useState("razorpay");
-    const [loading, setLoading] = useState(false);
-
     if (!cart) {
         return (
             <div className="payment-container">
@@ -21,55 +17,6 @@ const Payment = () => {
     }
 
     const total = cart.cartTotal;
-
-    const payNow = () => {
-
-        setLoading(true);
-
-        if (paymentMethod === "cod") {
-
-            setTimeout(() => {
-
-                navigate("/payment-success", {
-
-                    state: {
-
-                        amount: total,
-
-                        paymentMethod: "Cash On Delivery",
-
-                        transactionId: "COD-" + Date.now()
-
-                    }
-
-                });
-
-            }, 1500);
-
-            return;
-        }
-
-        // Razorpay integration will come later
-
-        setTimeout(() => {
-
-            navigate("/payment-success", {
-
-                state: {
-
-                    amount: total,
-
-                    paymentMethod: paymentMethod,
-
-                    transactionId: "TXN" + Date.now()
-
-                }
-
-            });
-
-        }, 1500);
-
-    };
 
     return (
 
@@ -146,19 +93,7 @@ const Payment = () => {
 
                     <label>
 
-                        <input
-
-                            type="radio"
-
-                            checked={paymentMethod === "razorpay"}
-
-                            onChange={() =>
-
-                                setPaymentMethod("razorpay")
-
-                            }
-
-                        />
+                        <input type="radio" checked readOnly />
 
                         Razorpay
 
@@ -166,19 +101,7 @@ const Payment = () => {
 
                     <label>
 
-                        <input
-
-                            type="radio"
-
-                            checked={paymentMethod === "upi"}
-
-                            onChange={() =>
-
-                                setPaymentMethod("upi")
-
-                            }
-
-                        />
+                        <input type="radio" disabled />
 
                         UPI
 
@@ -186,19 +109,7 @@ const Payment = () => {
 
                     <label>
 
-                        <input
-
-                            type="radio"
-
-                            checked={paymentMethod === "cod"}
-
-                            onChange={() =>
-
-                                setPaymentMethod("cod")
-
-                            }
-
-                        />
+                        <input type="radio" disabled />
 
                         Cash On Delivery
 
@@ -210,25 +121,11 @@ const Payment = () => {
 
                     className="pay-btn"
 
-                    onClick={payNow}
-
-                    disabled={loading}
+                    onClick={() => navigate("/shopkeeper/place-order")}
 
                 >
 
-                    {
-
-                        loading
-
-                            ?
-
-                            "Processing..."
-
-                            :
-
-                            `Pay ₹${total}`
-
-                    }
+                    {`Continue to secure checkout · ₹${total}`}
 
                 </button>
 

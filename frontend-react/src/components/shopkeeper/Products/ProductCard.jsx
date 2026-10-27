@@ -1,10 +1,11 @@
 import QuantitySelector from "./QuantitySelector";
+import { getBackendAssetUrl } from "../../../services/api";
 
 function ProductCard({ product, quantity, onIncrease, onDecrease, onAddToCart }) {
     return (
         <div className="product-card">
             <img
-                src={product.image ? `http://localhost:5000/${product.image.replace(/\\/g, "/")}` : "https://via.placeholder.com/180"}
+                src={product.image ? getBackendAssetUrl(product.image) : "https://via.placeholder.com/180"}
                 alt={product.name}
                 className="product-image"
             />

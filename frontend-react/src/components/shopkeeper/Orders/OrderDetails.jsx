@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { getOrder } from "../../../services/orderService";
+import { getBackendAssetUrl } from "../../../services/api";
 
 import "../../../assets/css/orderDetails.css";
 
@@ -16,34 +17,20 @@ function OrderDetails() {
     const [order, setOrder] = useState(null);
 
     useEffect(() => {
+        let active = true;
+        getOrder(id)
+            .then((response) => {
+                if (active) setOrder(response.order);
+            })
+            .catch((error) => console.log(error))
+            .finally(() => {
+                if (active) setLoading(false);
+            });
 
-        loadOrder();
-
-    }, []);
-
-    const loadOrder = async () => {
-
-        try {
-
-            const response = await getOrder(id);
-
-            setOrder(response.order);
-
-        }
-
-        catch (error) {
-
-            console.log(error);
-
-        }
-
-        finally {
-
-            setLoading(false);
-
-        }
-
-    };
+        return () => {
+            active = false;
+        };
+    }, [id]);
 
     if (loading) {
 
@@ -118,7 +105,7 @@ function OrderDetails() {
                     >
 
                         <img
-                            src={`http://localhost:5000/${item.image}`}
+                            src={getBackendAssetUrl(item.image)}
                             alt={item.productName}
                         />
 

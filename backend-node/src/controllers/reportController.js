@@ -3,6 +3,14 @@ const inventoryReport = require("../reports/inventoryReport");
 
 const salesReport = require("../reports/salesReport");
 
+const logReportFailure = (event, error) => {
+  console.error(JSON.stringify({
+    event,
+    errorCode: String(error.code || error.name || "REPORT_ERROR").slice(0, 80),
+    statusCode: error.response?.status || null
+  }));
+};
+
 //Inventory Report
 exports.getInventoryReport = async (req, res) => {
   try {
@@ -16,7 +24,7 @@ exports.getInventoryReport = async (req, res) => {
       inventory,
     });
   } catch (error) {
-    console.error("Inventory Report Error:", error);
+    logReportFailure("inventory_report_failed", error);
 
     res.status(500).json({
       success: false,
@@ -38,7 +46,7 @@ exports.getSummaryReport = async (req, res) => {
       summary,
     });
   } catch (error) {
-    console.error("Summary Report Error:", error);
+    logReportFailure("summary_report_failed", error);
 
     res.status(500).json({
       success: false,
@@ -63,7 +71,7 @@ exports.getLowStockReport = async (req, res) => {
       products,
     });
   } catch (error) {
-    console.error("Low Stock Report Error:", error);
+    logReportFailure("low_stock_report_failed", error);
 
     res.status(500).json({
       success: false,
@@ -93,7 +101,7 @@ exports.exportInventoryPDF = async (req, res) => {
       warehouseCapacity,
     );
   } catch (error) {
-    console.error("PDF Export Error:", error);
+    logReportFailure("inventory_pdf_export_failed", error);
 
     res.status(500).json({
       success: false,
@@ -120,7 +128,7 @@ exports.exportInventoryExcel = async (req, res) => {
       warehouseCapacity,
     );
   } catch (error) {
-    console.error("Excel Export Error:", error);
+    logReportFailure("inventory_excel_export_failed", error);
 
     res.status(500).json({
       success: false,
@@ -152,7 +160,7 @@ exports.getMonthlySalesReport = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        logReportFailure("monthly_sales_report_failed", error);
 
         res.status(500).json({
             success: false,
@@ -176,7 +184,7 @@ exports.exportMonthlySalesPDF = async (req, res) => {
         salesReport.generateMonthlySalesPDF(res, report);
 
     } catch (error) {
-        console.error(error);
+        logReportFailure("monthly_sales_pdf_export_failed", error);
 
         res.status(500).json({
             success: false,
@@ -204,7 +212,7 @@ exports.exportMonthlySalesExcel = async (req, res) => {
 
     } catch (error) {
 
-        console.error(error);
+        logReportFailure("monthly_sales_excel_export_failed", error);
 
         res.status(500).json({
             success: false,
@@ -259,7 +267,7 @@ exports.getYearlySalesReport = async (req, res) => {
 
     catch (error) {
 
-        console.error(error);
+        logReportFailure("yearly_sales_report_failed", error);
 
         res.status(500).json({
 
@@ -297,7 +305,7 @@ exports.exportYearlySalesPDF = async (req, res) => {
 
     } catch (error) {
 
-        console.error(error);
+        logReportFailure("yearly_sales_pdf_export_failed", error);
 
         res.status(500).json({
             success: false,
@@ -326,7 +334,7 @@ exports.exportYearlySalesExcel = async (req, res) => {
 
     } catch (error) {
 
-        console.error(error);
+        logReportFailure("yearly_sales_excel_export_failed", error);
 
         res.status(500).json({
             success: false,

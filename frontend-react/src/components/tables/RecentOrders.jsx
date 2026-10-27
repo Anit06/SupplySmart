@@ -18,7 +18,8 @@ function RecentOrders({ orders, warehouses = [] }) {
             const orderNumber = order.orderNumber || order._id?.slice(-6) || "—";
             const customerName = order.shopkeeperName || order.customerName || "Guest";
             const warehouseName = warehouse.name || order.warehouseName || "Warehouse";
-            const orderDate = new Date(order.createdAt || order.updatedAt || Date.now());
+            const orderDateValue = order.createdAt || order.updatedAt;
+            const orderDate = orderDateValue ? new Date(orderDateValue) : null;
             const statusClass = `dashboard-badge dashboard-badge--${String(order.status || "Placed").toLowerCase()}`;
 
             return (
@@ -31,7 +32,11 @@ function RecentOrders({ orders, warehouses = [] }) {
                 <div className="dashboard-order__meta">
                   <b>₹{Number(order.totalAmount || order.finalAmount || 0).toLocaleString("en-IN")}</b>
                   <em className={statusClass}>{order.status || "Placed"}</em>
-                  <small>{orderDate.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</small>
+                  <small>
+                    {orderDate && !Number.isNaN(orderDate.getTime())
+                      ? orderDate.toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+                      : "—"}
+                  </small>
                 </div>
               </div>
             );

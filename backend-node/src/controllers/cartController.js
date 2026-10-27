@@ -259,9 +259,13 @@ exports.placeOrder = async (req, res) => {
 
     } catch (error) {
 
-        return res.status(400).json({
+        const retryWithNewId =
+            error.code === "CHECKOUT_EXPIRED" || error.code === "CHECKOUT_RETRY_NEW_ID";
+        return res.status(retryWithNewId ? 409 : 400).json({
 
             success: false,
+
+            ...(retryWithNewId ? { code: error.code } : {}),
 
             message: error.message
 

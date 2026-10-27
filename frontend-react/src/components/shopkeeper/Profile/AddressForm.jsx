@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import "../../../assets/css/address.css";
 
 const initialFormData = {
@@ -15,36 +15,28 @@ const initialFormData = {
   isDefault: false,
 };
 
+const getFormData = (initialData) => initialData ? {
+  fullName: initialData.fullName || "",
+  phone: initialData.phone || "",
+  addressLine1: initialData.addressLine1 || "",
+  addressLine2: initialData.addressLine2 || "",
+  landmark: initialData.landmark || "",
+  city: initialData.city || "",
+  state: initialData.state || "",
+  country: initialData.country || "",
+  pincode: initialData.pincode || "",
+  addressType: initialData.addressType || "Home",
+  isDefault: Boolean(initialData.isDefault),
+} : initialFormData;
+
 function AddressForm({
   show,
   onClose,
   onSave,
   initialData,
-  hasDefaultAddress,
+  loading = false,
 }) {
-  const [formData, setFormData] = useState(initialFormData);
-
-  useEffect(() => {
-    if (show) {
-      if (initialData) {
-        setFormData({
-          fullName: initialData.fullName || "",
-          phone: initialData.phone || "",
-          addressLine1: initialData.addressLine1 || "",
-          addressLine2: initialData.addressLine2 || "",
-          landmark: initialData.landmark || "",
-          city: initialData.city || "",
-          state: initialData.state || "",
-          country: initialData.country || "",
-          pincode: initialData.pincode || "",
-          addressType: initialData.addressType || "Home",
-          isDefault: Boolean(initialData.isDefault),
-        });
-      } else {
-        setFormData(initialFormData);
-      }
-    }
-  }, [show, initialData]);
+  const [formData, setFormData] = useState(() => getFormData(initialData));
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -240,8 +232,8 @@ function AddressForm({
         <button type="button" className="cancel-btn" onClick={onClose}>
           Cancel
         </button>
-        <button type="submit" className="save-btn">
-          {initialData ? "Update Address" : "Save Address"}
+        <button type="submit" className="save-btn" disabled={loading}>
+          {loading ? "Saving..." : initialData ? "Update Address" : "Save Address"}
         </button>
       </div>
     </form>

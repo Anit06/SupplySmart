@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getOrders } from "../../../services/orderService";
+import { getBackendAssetUrl } from "../../../services/api";
 
 import "../../../assets/css/orderHistory.css";
 
@@ -15,19 +16,20 @@ function OrderHistory() {
     const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
-        loadOrders();
-    }, []);
+        let active = true;
+        getOrders()
+            .then((response) => {
+                if (active) setOrders(response.orders || []);
+            })
+            .catch((error) => console.log(error))
+            .finally(() => {
+                if (active) setLoading(false);
+            });
 
-    const loadOrders = async () => {
-        try {
-            const response = await getOrders();
-            setOrders(response.orders || []);
-        } catch (error) {
-            console.log(error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        return () => {
+            active = false;
+        };
+    }, []);
 
     // Pagination Logic
     const totalPages = Math.ceil(orders.length / PAGE_SIZE) || 1;
@@ -93,7 +95,7 @@ function OrderHistory() {
                             {order.items.map((item) => (
                                 <div key={item._id} className="order-item">
                                     <img
-                                        src={`http://localhost:5000/${item.image}`}
+                                        src={getBackendAssetUrl(item.image)}
                                         alt={item.productName}
                                     />
 

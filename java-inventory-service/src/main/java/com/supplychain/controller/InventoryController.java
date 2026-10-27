@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.supplychain.dto.ReduceInventoryRequest;
 import com.supplychain.dto.InventoryRequest;
+import com.supplychain.dto.InventoryReservationRequest;
 import com.supplychain.dto.InventoryResponse;
 import com.supplychain.model.Warehouse;
 import com.supplychain.repository.WarehouseRepository;
@@ -14,7 +15,6 @@ import com.supplychain.service.InventoryService;
 
 @RestController
 @RequestMapping("/api/inventory")
-@CrossOrigin(origins = "*")
 public class InventoryController {
 
     private final InventoryService inventoryService;
@@ -81,6 +81,26 @@ public ResponseEntity<List<InventoryResponse>> getAllInventory() {
 
         return ResponseEntity.ok(
                 inventoryService.reduceInventory(request));
+    }
+
+    @PostMapping("/reserve")
+    public ResponseEntity<InventoryResponse> reserveInventory(
+            @RequestBody InventoryReservationRequest request) {
+        return ResponseEntity.ok(inventoryService.reserveInventory(request));
+    }
+
+    @PutMapping("/reservation/commit")
+    public ResponseEntity<String> commitReservation(
+            @RequestBody InventoryReservationRequest request) {
+        inventoryService.commitReservation(request);
+        return ResponseEntity.ok("Inventory reservation committed");
+    }
+
+    @PutMapping("/reservation/release")
+    public ResponseEntity<String> releaseReservation(
+            @RequestBody InventoryReservationRequest request) {
+        inventoryService.releaseReservation(request);
+        return ResponseEntity.ok("Inventory reservation released");
     }
 
     /*

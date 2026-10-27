@@ -39,7 +39,19 @@ function Inventory() {
   };
 
   useEffect(() => {
-    loadInventory();
+    if (!warehouseId) return;
+    let active = true;
+    getInventory(warehouseId)
+      .then((response) => {
+        if (active) setInventory(response.data || []);
+      })
+      .catch((err) => {
+        if (active) setError(err.response?.data?.message || "Failed to load inventory");
+      });
+
+    return () => {
+      active = false;
+    };
   }, [warehouseId]);
 
   const handleChange = (e) => {

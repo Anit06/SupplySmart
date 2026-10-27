@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "./api";
 
-const API_URL = "http://localhost:5000/api/shopkeeper";
+const API_URL = `${API_BASE_URL}/shopkeeper`;
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
@@ -47,7 +48,7 @@ const deleteProfile = async (userId) => {
     return axios.delete(`${API_URL}/${userId}`, getAuthHeaders());
 };
 export const getProductCategories = () => {
-  return axios.get("http://localhost:5000/api/products/categories");
+  return axios.get(`${API_BASE_URL}/products/categories`);
 };
 
 export {

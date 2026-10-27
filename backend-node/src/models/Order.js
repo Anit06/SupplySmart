@@ -114,6 +114,11 @@ const orderSchema = new mongoose.Schema({
 
     },
 
+    checkoutId: {
+        type: String,
+        default: undefined
+    },
+
     warehouseId: {
 
         type: mongoose.Schema.Types.ObjectId,
@@ -132,6 +137,11 @@ const orderSchema = new mongoose.Schema({
 
         default: 0
 
+    },
+
+    taxAmount: {
+        type: Number,
+        default: 0
     },
 
     discountAmount: {
@@ -181,6 +191,22 @@ const orderSchema = new mongoose.Schema({
         enum: ["Pending", "Paid", "Failed"],
 
         default: "Pending"
+
+    },
+
+    activePaymentAttemptId: {
+
+        type: String,
+
+        default: null
+
+    },
+
+    capturedPaymentId: {
+
+        type: String,
+
+        default: null
 
     },
 
@@ -260,6 +286,15 @@ const orderSchema = new mongoose.Schema({
     timestamps: true
 
 });
+
+orderSchema.index(
+    { userId: 1, checkoutId: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { checkoutId: { $type: "string" } }
+    }
+);
+orderSchema.index({ userId: 1, createdAt: -1 });
 
 /*
 ==================================
